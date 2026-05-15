@@ -1,0 +1,4 @@
+1-psql -U postgres
+2-\c elt_db
+3-\dn
+4-

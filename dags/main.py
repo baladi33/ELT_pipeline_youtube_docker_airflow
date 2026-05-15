@@ -1,0 +1,87 @@
+from airflow import DAG
+from airflow.operators.trigger_dagrun import TriggerDagRunOperator
+
+import pendulum
+
+from datetime import datetime, timedelta
+
+from api.videos_status import (
+    get_playlist_id,
+    get_video_ids,
+    extract_video_details,
+    save_to_json,
+)
+from datawarehouse.dwh import staging_table, core_table
+
+
+# Morocco timezone
+local_tz = pendulum.timezone("Africa/Casablanca")
+
+
+# Default arguments
+default_args = {
+    "owner": "dataengineers",
+    "depends_on_past": False,
+    "email": "data@engineers.com",
+    "email_on_failure": False,
+    "email_on_retry": False,
+    # "retries": 1,
+    # "retry_delay": timedelta(minutes=5),
+    "max_active_runs": 1,
+    "dagrun_timeout": timedelta(hours=1),
+    "start_date": datetime(2025, 1, 1, tzinfo=local_tz),
+    # "end_date": datetime(2030, 12, 31, tzinfo=local_tz),
+}
+
+# Variables
+staging_schema = "staging"
+core_schema = "core"
+
+
+# DAG : Produce JSON
+with DAG(
+    dag_id="produce_json",
+    default_args=default_args,
+    description="DAG to produce JSON file with raw YouTube data",
+    schedule="0 14 * * *",   # Every day at 14:00 Morocco time
+    catchup=False,
+    tags=["youtube", "etl", "json"],
+) as dag_produce:
+
+    # Tasks
+    playlist_id = get_playlist_id()
+
+    video_ids = get_video_ids(playlist_id)
+
+    extract_data = extract_video_details(video_ids)
+
+    save_to_json_task = save_to_json(extract_data)
+
+    trigger_update_db = TriggerDagRunOperator(
+        task_id="trigger_update_db",
+        trigger_dag_id="update_db",
+    )
+  
+
+    # Dependencies
+    (
+        playlist_id >> video_ids >> extract_data >> save_to_json_task >> trigger_update_db
+    )
+
+    # DAG 2: update_db
+with DAG(
+    dag_id="update_db",
+    default_args=default_args,
+    description="DAG to process JSON file and insert data into both staging and core schemas",
+    catchup=False,
+    schedule=None,
+) as dag_update:
+
+    # Define tasks
+    update_staging = staging_table()
+    update_core = core_table()
+
+
+    # Define dependencies
+    update_staging >> update_core 
+
