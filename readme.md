@@ -115,14 +115,14 @@ AIRFLOW_IMAGE_NAME=apache/airflow:2.7.1-python3.10
 AIRFLOW__CORE__LOAD_EXAMPLES=false
 
 # API YouTube
-YOUTUBE_API_KEY=Votre_Cle_API_YouTube_Ici
-
+YOUTUBE_API_KEY=your_youtube_api_key_here   # 🔑 Google Cloud Console
 # PostgreSQL Data Warehouse
-POSTGRES_USER=airflow
-POSTGRES_PASSWORD=airflow_secure_pwd
+POSTGRES_USER=your_postgres_user
+POSTGRES_PASSWORD=your_secure_password
 POSTGRES_DB=youtube_analytics
 POSTGRES_HOST=postgres
 POSTGRES_PORT=5432
+
 ```
 
 ### Étape 2 — Initialiser et démarrer
